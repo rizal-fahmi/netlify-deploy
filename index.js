@@ -1,20 +1,24 @@
-const api = 'https://pokeapi.co/api/v2/pokemon';
+const apiBase = 'https://pokeapi.co/api/v2/pokemon';
+let nextUrl = null;
+let prevUrl = null;
 
-async function getPokemon() {
+async function getPokemon(url) {
   try {
-    const pokemon = await fetch(api);
-    const data = await pokemon.json();
-    console.log(data);
+    const response = await fetch(url);
+    const data = await response.json();
+
+    nextUrl = data.next;
+    prevUrl = data.previous;
 
     const pokemonList = data.results;
     const res = [];
 
-    for (const pokemon of pokemonList) {
-      const detailPokemon = await fetch(pokemon.url);
-      const details = await detailPokemon.json();
+    for (let i = 0; i < pokemonList.length; i++) {
+      const detailResponse = await fetch(pokemonList[i].url);
+      const details = await detailResponse.json();
       res.push({
-        name: pokemon.name,
-        url: pokemon.url,
+        name: pokemonList[i].name,
+        url: pokemonList[i].url,
         details: details,
         // details: {
         //   abilities: details.abilities.map((a) => a.ability.name),
@@ -29,10 +33,6 @@ async function getPokemon() {
         //   // },
       });
     }
-
-    res.forEach((element) => {
-      console.log(element.name);
-    });
 
     const container = document.getElementById('pokemon-container');
     container.innerHTML = '';
@@ -85,14 +85,36 @@ async function getPokemon() {
       `;
       container.insertAdjacentHTML('beforeend', pokemonCardHTML);
     });
+    updateNavigation();
   } catch (error) {
     console.error('Terjadi kesalahan:', error);
   }
 }
 
-window.onload = getPokemon;
+function updateNavigation() {
+  const nextButton = document.getElementById('next-button');
+  const prevButton = document.getElementById('prev-button');
 
-getPokemon();
+  if (nextUrl) {
+    nextButton.classList.remove('disabled');
+    nextButton.onclick = () => getPokemon(nextUrl);
+  } else {
+    nextButton.classList.add('disabled');
+    nextButton.onclick = null;
+  }
+
+  if (prevUrl) {
+    prevButton.classList.remove('disabled');
+    prevButton.onclick = () => getPokemon(prevUrl);
+  } else {
+    prevButton.classList.add('disabled');
+    prevButton.onclick = null;
+  }
+}
+
+window.onload = () => getPokemon(apiBase);
+
+// getPokemon();
 
 function capitalizeCase(word) {
   return word.charAt(0).toUpperCase() + word.slice(1);
